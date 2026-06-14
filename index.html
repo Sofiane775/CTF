@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTF Security Challenges</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #0f1318;
+    --border: #1a2030;
+    --accent: #00ff88;
+    --accent2: #ff3e6c;
+    --accent3: #ffcc00;
+    --text: #c8d6e5;
+    --muted: #4a5568;
+    --easy: #00ff88;
+    --medium: #ffcc00;
+    --hard: #ff7733;
+    --expert: #ff3e6c;
+    --insane: #cc44ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.015) 2px, rgba(0,255,136,0.015) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: rgba(10,12,16,0.95);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent);
+    font-size: 20px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(0,255,136,0.5);
+  }
+
+  .logo span { color: var(--accent2); }
+
+  .score-board {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .score-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 28px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,255,136,0.6);
+  }
+
+  .score-display .label {
+    font-size: 11px;
+    color: var(--muted);
+    display: block;
+    text-align: right;
+    letter-spacing: 2px;
+  }
+
+  .progress-bar-wrap {
+    width: 200px;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #00ccff);
+    width: 0%;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 8px rgba(0,255,136,0.6);
+  }
+
+  .progress-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .hero {
+    padding: 60px 40px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+
+  .hero h1 .green { color: var(--accent); text-shadow: 0 0 30px rgba(0,255,136,0.4); }
+  .hero h1 .red { color: var(--accent2); }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 17px;
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,255,136,0.05);
+  }
+
+  .challenges-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px 80px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  .challenge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+  }
+
+  .challenge-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+  }
+
+  .challenge-card.easy::before { background: var(--easy); }
+  .challenge-card.medium::before { background: var(--medium); }
+  .challenge-card.hard::before { background: var(--hard); }
+  .challenge-card.expert::before { background: var(--expert); }
+  .challenge-card.insane::before { background: var(--insane); }
+
+  .challenge-card:hover {
+    border-color: var(--muted);
+    transform: translateY(-1px);
+  }
+
+  .challenge-card.solved {
+    border-color: rgba(0,255,136,0.3);
+    background: rgba(0,255,136,0.03);
+  }
+
+  .challenge-card.solved::after {
+    content: '✓ RÉSOLU';
+    position: absolute;
+    top: 16px; right: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--easy);
+    letter-spacing: 2px;
+    background: rgba(0,255,136,0.1);
+    padding: 3px 8px;
+    border: 1px solid rgba(0,255,136,0.3);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .card-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .difficulty-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    letter-spacing: 1px;
+  }
+
+  .tag-easy { color: var(--easy); border: 1px solid rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); }
+  .tag-medium { color: var(--medium); border: 1px solid rgba(255,204,0,0.3); background: rgba(255,204,0,0.05); }
+  .tag-hard { color: var(--hard); border: 1px solid rgba(255,119,51,0.3); background: rgba(255,119,51,0.05); }
+  .tag-expert { color: var(--expert); border: 1px solid rgba(255,62,108,0.3); background: rgba(255,62,108,0.05); }
+  .tag-insane { color: var(--insane); border: 1px solid rgba(204,68,255,0.3); background: rgba(204,68,255,0.05); }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .card-category {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .card-desc {
+    font-size: 14px;
+    color: #7a8fa6;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  /* Code snippet */
+  .code-snippet {
+    background: #080a0e;
+    border: 1px solid var(--border);
+    padding: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: #6aadcb;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    line-height: 1.6;
+    white-space: pre;
+  }
+
+  .code-snippet .kw { color: #cc44ff; }
+  .code-snippet .str { color: #ff9955; }
+  .code-snippet .cm { color: #4a5568; }
+  .code-snippet .fn { color: #00ccff; }
+  .code-snippet .hl { color: var(--accent2); font-weight: bold; }
+
+  .answer-area {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .answer-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .answer-input:focus { border-color: var(--accent); }
+  .answer-input.correct { border-color: var(--easy); background: rgba(0,255,136,0.05); }
+  .answer-input.wrong { border-color: var(--accent2); }
+
+  .submit-btn {
+    background: var(--border);
+    border: 1px solid var(--muted);
+    color: var(--text);
+    padding: 8px 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .submit-btn:hover {
+    background: rgba(0,255,136,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .feedback {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    margin-top: 8px;
+    min-height: 16px;
+    letter-spacing: 1px;
+  }
+
+  .feedback.ok { color: var(--easy); }
+  .feedback.err { color: var(--accent2); }
+
+  /* Hint button */
+  .hint-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 8px;
+    letter-spacing: 1px;
+    text-decoration: underline;
+  }
+
+  .hint-btn:hover { color: var(--accent3); }
+
+  .hint-text {
+    display: none;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--accent3);
+    font-family: 'Share Tech Mono', monospace;
+    background: rgba(255,204,0,0.05);
+    border: 1px solid rgba(255,204,0,0.2);
+    padding: 8px;
+    line-height: 1.5;
+  }
+
+  .hint-text.visible { display: block; }
+
+  /* Victory */
+  .victory-banner {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    padding: 40px 60px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0 0 60px rgba(0,255,136,0.3);
+  }
+
+  .victory-banner.show { display: block; }
+  .victory-banner h2 { font-size: 32px; color: var(--accent); margin-bottom: 12px; }
+  .victory-banner p { color: var(--muted); font-family: 'Share Tech Mono', monospace; }
+
+  /* ── Tablet (≤ 900px) ── */
+  @media (max-width: 900px) {
+    .challenges-grid {
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      padding: 0 24px 60px;
+      gap: 12px;
+    }
+    .hero { padding: 40px 24px 24px; }
+    .hero h1 { font-size: 40px; }
+    .hero p { font-size: 15px; }
+    .progress-bar-wrap { width: 150px; }
+  }
+
+  /* ── Mobile large (≤ 640px) ── */
+  @media (max-width: 640px) {
+    header {
+      padding: 12px 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .logo { font-size: 17px; }
+
+    /* Score board empilé sous le logo */
+    .score-board {
+      width: 100%;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .score-display { font-size: 20px; }
+    .progress-bar-wrap { width: auto; flex: 1; }
+
+    .hero {
+      padding: 28px 16px 16px;
+    }
+    .hero h1 {
+      font-size: 30px;
+      letter-spacing: -0.5px;
+    }
+    .hero p {
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .legend { gap: 12px; margin-bottom: 20px; }
+    .legend-item { font-size: 12px; }
+
+    .filter-bar { gap: 6px; margin-bottom: 20px; }
+    .filter-btn { padding: 5px 11px; font-size: 11px; }
+
+    .challenges-grid {
+      grid-template-columns: 1fr;
+      padding: 0 16px 60px;
+      gap: 12px;
+    }
+
+    .challenge-card { padding: 16px 14px 16px 18px; }
+
+    .card-title { font-size: 15px; }
+    .card-desc { font-size: 13px; }
+
+    .code-snippet {
+      font-size: 10px;
+      padding: 10px;
+    }
+
+    /* Input + bouton en colonne sur très petit écran */
+    .answer-area {
+      flex-direction: column;
+      gap: 6px;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 13px;
+    }
+    .answer-input {
+      font-size: 14px; /* évite le zoom auto iOS */
+      padding: 10px 12px;
+    }
+
+    /* Badge résolu repositionné */
+    .challenge-card.solved::after {
+      font-size: 9px;
+      padding: 2px 6px;
+      top: 12px;
+      right: 12px;
+    }
+
+    .victory-banner {
+      padding: 28px 24px;
+      width: calc(100% - 32px);
+    }
+    .victory-banner h2 { font-size: 24px; }
+  }
+
+  /* ── Mobile XS (≤ 380px) ── */
+  @media (max-width: 380px) {
+    .hero h1 { font-size: 26px; }
+    .filter-btn { padding: 5px 9px; font-size: 10px; letter-spacing: 0; }
+    .score-display { font-size: 18px; }
+    .logo { font-size: 15px; letter-spacing: 1px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CTF<span>::</span>LAB</div>
+  <div class="score-board">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0 / 50 résolus</div>
+    </div>
+    <div class="score-display">
+      <span class="label">SCORE</span>
+      <span id="scoreDisplay">0/50</span>
+    </div>
+  </div>
+</header>
+
+<div class="hero">
+  <h1><span class="green">HACK</span> THE <span class="red">FLAG</span></h1>
+  <p>50 challenges de cybersécurité — des injections SQL basiques aux failles les plus tordues. Chaque réponse est un flag ou un vecteur d'attaque. Prouve que tu comprends vraiment.</p>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--easy)"></div> EASY</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--medium)"></div> MEDIUM</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--hard)"></div> HARD</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--expert)"></div> EXPERT</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--insane)"></div> INSANE</div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterChallenges('all', this)">TOUS</button>
+    <button class="filter-btn" onclick="filterChallenges('easy', this)">EASY</button>
+    <button class="filter-btn" onclick="filterChallenges('medium', this)">MEDIUM</button>
+    <button class="filter-btn" onclick="filterChallenges('hard', this)">HARD</button>
+    <button class="filter-btn" onclick="filterChallenges('expert', this)">EXPERT</button>
+    <button class="filter-btn" onclick="filterChallenges('insane', this)">INSANE</button>
+    <button class="filter-btn" onclick="filterChallenges('solved', this)">✓ RÉSOLUS</button>
+  </div>
+</div>
+
+<div class="challenges-grid" id="challengesGrid"></div>
+
+<div class="victory-banner" id="victoryBanner">
+  <h2>🏆 FÉLICITATIONS</h2>
+  <p>Tu as résolu les 50 challenges.<br>Tu es un vrai hacker.</p>
+</div>
+
+<script>
+const challenges = [
+  // ── EASY ──────────────────────────────────────────────────────────
+  {
+    id:1, diff:'easy', cat:'SQL Injection',
+    title:'Login Bypass Classique',
+    desc:"Un formulaire de connexion compare directement l'input avec la BDD. Quel payload dans le champ username permet de passer sans mot de passe ?",
+    code:`SELECT * FROM users\nWHERE username='[INPUT]'\nAND password='...';`,
+    hint:"Pense à fermer la quote et à commenter la suite.",
+    answers:["' OR '1'='1", "' OR 1=1--", "' OR '1'='1'--", "' OR 1=1 --", "' or 1=1--", "' or '1'='1"]
+  },
+  {
+    id:2, diff:'easy', cat:'XSS Réfléchi',
+    title:'Alerte dans le miroir',
+    desc:"Un champ de recherche reflète l'input dans la page sans sanitisation. Quel payload déclenche une alerte JS ?",
+    code:`<h2>Résultats pour : [INPUT]</h2>`,
+    hint:"La balise script est ton amie.",
+    answers:["\x3cscript\x3ealert(1)\x3c/script\x3e","\x3cscript\x3ealert('xss')\x3c/script\x3e"]
+  },
+  {
+    id:3, diff:'easy', cat:'Traversal',
+    title:'Chemin de travers',
+    desc:"L'URL charge un fichier : /file?name=rapport.pdf. Quel paramètre permet de lire /etc/passwd ?",
+    code:`GET /file?name=rapport.pdf`,
+    hint:"Remonte dans l'arborescence avec des ../",
+    answers:["../../../etc/passwd","../../../../etc/passwd","../../etc/passwd","../etc/passwd"]
+  },
+  {
+    id:4, diff:'easy', cat:'Brute Force',
+    title:'Admin par défaut',
+    desc:"La page /admin utilise une authentification HTTP Basic. Quel est le couple login:password le plus souvent oublié par les sysadmins ?",
+    hint:"C'est dans tous les manuels depuis 1995.",
+    answers:["admin:admin","admin:password","root:root","admin:1234"]
+  },
+  {
+    id:5, diff:'easy', cat:'IDOR',
+    title:'Numéro de série',
+    desc:"L'API retourne /api/invoice/1042 pour l'utilisateur connecté. Que fait un attaquant pour voir les factures des autres ?",
+    hint:"Change juste un chiffre.",
+    answers:["changer l'id","modifier l'id","incrementer l'id","changer le numero","idor","changer id dans url"]
+  },
+  {
+    id:6, diff:'easy', cat:'Default Creds',
+    title:'Interface Exposée',
+    desc:"Un router Cisco IOS accessible sur le réseau. Quel est le couple d'accès par défaut le plus courant ?",
+    hint:"Souvent vide ou 'cisco'.",
+    answers:["cisco:cisco","admin:cisco","admin:","cisco:","admin:admin"]
+  },
+  {
+    id:7, diff:'easy', cat:'Cookies',
+    title:'Admin Cookie',
+    desc:"Le cookie de session contient : isAdmin=false. Que faire pour élever ses privilèges ?",
+    hint:"DevTools > Application > Cookies.",
+    answers:["passer isAdmin à true","modifier isAdmin=true","changer isAdmin en true","isAdmin=true","editer le cookie isAdmin"]
+  },
+  {
+    id:8, diff:'easy', cat:'Information Disclosure',
+    title:'Commentaire Révélateur',
+    desc:"La page HTML contient un commentaire. Quel outil/raccourci utilise-t-on pour voir les secrets cachés dans le source ?",
+    hint:"View Source ou Ctrl+U.",
+    answers:["ctrl+u","view source","afficher source","ctrl u","f12","inspecteur","devtools"]
+  },
+  {
+    id:9, diff:'easy', cat:'Open Redirect',
+    title:'Redirection Ouverte',
+    desc:"L'URL est : /login?redirect=https://monsite.com. Comment redirige-t-on la victime vers un site phishing ?",
+    code:`GET /login?redirect=https://monsite.com`,
+    hint:"Remplace juste la valeur du paramètre redirect.",
+    answers:["changer la valeur de redirect","modifier redirect","remplacer l url","changer l url de redirect"]
+  },
+  {
+    id:10, diff:'easy', cat:'Command Injection',
+    title:'Ping Injection',
+    desc:"Un formulaire exécute : ping -c 1 [IP]. Quel payload exécute 'id' en plus du ping ?",
+    code:`ping -c 1 [IP]`,
+    hint:"Enchaîne les commandes avec un séparateur shell.",
+    answers:["127.0.0.1; id","127.0.0.1 && id","127.0.0.1 | id","127.0.0.1;id","127.0.0.1|id","127.0.0.1&&id"]
+  },
+
+  // ── MEDIUM ────────────────────────────────────────────────────────
+  {
+    id:11, diff:'medium', cat:'SQL Injection',
+    title:'Union Select Aveugle',
+    desc:"La requête est filtrée mais renvoie des erreurs. Quel payload UNION permet d'extraire la version MySQL ?",
+    code:`SELECT name FROM products WHERE id=[INPUT]`,
+    hint:"Détermine d'abord le nombre de colonnes avec ORDER BY.",
+    answers:["1 UNION SELECT @@version--","1 UNION SELECT version()--","' UNION SELECT @@version--","1 union select @@version--","1 UNION SELECT @@version,null--","1 UNION SELECT null,@@version--"]
+  },
+  {
+    id:12, diff:'medium', cat:'XSS Stocké',
+    title:'Persistance XSS',
+    desc:"Un forum stocke les messages. Quel est l'impact d'un XSS stocké par rapport à un XSS réfléchi ?",
+    hint:"Pense au nombre de victimes touchées.",
+    answers:["toutes les victimes qui visitent la page","exécuté pour chaque visiteur","persistent pour tous les utilisateurs","affecte tous les visiteurs","stocké en base et exécuté chez tous"]
+  },
+  {
+    id:13, diff:'medium', cat:'CSRF',
+    title:'Formulaire Fantôme',
+    desc:"Un site banking manque de token anti-CSRF. Un attaquant crée une page HTML piégée. Que se passe-t-il quand la victime connectée la visite ?",
+    hint:"Le navigateur envoie automatiquement...",
+    answers:["virement effectué sans consentement","transfert automatique","les cookies sont envoyés automatiquement","action exécutée avec les cookies de la victime","requête forgée exécutée"]
+  },
+  {
+    id:14, diff:'medium', cat:'LFI',
+    title:'Inclusion Locale',
+    desc:"PHP : include($_GET['page'].'.php'). Quel payload inclut /etc/passwd en contournant l'extension .php ?",
+    code:`include($_GET['page'].'.php');`,
+    hint:"Cherche du côté des null bytes ou des wrappers PHP.",
+    answers:["php://filter/convert.base64-encode/resource=/etc/passwd","../../../etc/passwd%00","php://filter/read=convert.base64-encode/resource=../../../etc/passwd"]
+  },
+  {
+    id:15, diff:'medium', cat:'JWT',
+    title:'Algorithme None',
+    desc:"Un token JWT utilise RS256. Quelle attaque consiste à forcer l'algorithme sur 'none' pour forger un token sans signature ?",
+    hint:"C'est une vulnérabilité de l'implémentation JWT.",
+    answers:["algorithm confusion","alg:none attack","none algorithm attack","jwt none","changer alg en none","algorithm none"]
+  },
+  {
+    id:16, diff:'medium', cat:'SSRF',
+    title:'Fetch Interne',
+    desc:"Un endpoint /fetch?url= charge des URLs distantes. Comment accède-t-on aux services internes (ex: metadata AWS) ?",
+    code:`GET /fetch?url=https://exemple.com`,
+    hint:"Il y a une IP spéciale pour les métadonnées cloud.",
+    answers:["169.254.169.254","http://169.254.169.254/","http://169.254.169.254/latest/meta-data/","ssrf vers 169.254.169.254"]
+  },
+  {
+    id:17, diff:'medium', cat:'XXE',
+    title:'Entité Externe XML',
+    desc:"Un parser XML accepte des entités externes. Complète la déclaration XXE pour lire /etc/passwd.",
+    code:`<?xml version="1.0"?>\n<!DOCTYPE foo [ <!ENTITY xxe ???> ]>\n<data>&xxe;</data>`,
+    hint:"SYSTEM permet de pointer vers un fichier local.",
+    answers:['SYSTEM "/etc/passwd"','SYSTEM "file:///etc/passwd"','SYSTEM file:///etc/passwd']
+  },
+  {
+    id:18, diff:'medium', cat:'Deserialisation',
+    title:'Objet Empoisonné',
+    desc:"Un cookie PHP contient un objet sérialisé. Quel est le vecteur classique d'exploitation de la déserialisation PHP ?",
+    hint:"Cherche du côté des méthodes magiques.",
+    answers:["magic methods","__wakeup","__destruct","gadget chain","php object injection","phar deserialization"]
+  },
+  {
+    id:19, diff:'medium', cat:'HTTP Headers',
+    title:'Header Injection',
+    desc:"Un header HTTP est construit avec l'input utilisateur. Quel caractère permet d'injecter un nouveau header ?",
+    hint:"Les headers HTTP sont séparés par...",
+    answers:["\\r\\n","crlf","\\n","carriage return line feed","0x0d0x0a","\\r\\n\\r\\n"]
+  },
+  {
+    id:20, diff:'medium', cat:'Prototype Pollution',
+    title:'Object Pollution JS',
+    desc:"Une lib JS fusionne récursivement des objets. Quel chemin de clé permet de polluer Object.prototype ?",
+    code:`merge(obj, JSON.parse(userInput))`,
+    hint:"Pense à la propriété __proto__.",
+    answers:["__proto__","__proto__[admin]=true","{'__proto__':{'admin':true}}","__proto__.admin","constructor.prototype"]
+  },
+
+  // ── HARD ──────────────────────────────────────────────────────────
+  {
+    id:21, diff:'hard', cat:'SQLi Aveugle',
+    title:'Blind Boolean-Based',
+    desc:"Pas d'erreur, pas d'output. La page retourne juste OK ou KO. Quel type de SQLi utilise des conditions vraie/fausse pour extraire bit à bit ?",
+    code:`SELECT * FROM users WHERE id=1 AND [CONDITION]`,
+    hint:"On teste la véracité d'une condition et on observe la réponse.",
+    answers:["blind boolean based","boolean based blind sqli","boolean sqli","blind sqli boolean","boolean based sqli"]
+  },
+  {
+    id:22, diff:'hard', cat:'SQLi Time-Based',
+    title:'SQLi dans le Noir Total',
+    desc:"Même pas de différence de réponse OK/KO. Quel payload MySQL permet d'exfiltrer des données via des délais de réponse ?",
+    hint:"Une fonction MySQL provoque un délai...",
+    answers:["SLEEP()","1 AND SLEEP(5)","1; WAITFOR DELAY","'; WAITFOR DELAY '0:0:5'--","BENCHMARK(","sleep(5)","AND SLEEP(5)--"]
+  },
+  {
+    id:23, diff:'hard', cat:'RCE',
+    title:'PHP Webshell Upload',
+    desc:"Un site permet d'uploader des images. Il vérifie l'extension ET le Content-Type. Quelle technique contourne les deux vérifications ?",
+    hint:"Magic bytes + double extension.",
+    answers:["double extension","shell.php.jpg","magic bytes + double ext","GIF89a + php code","polyglot file","upload gif avec code php"]
+  },
+  {
+    id:24, diff:'hard', cat:'SSTI',
+    title:'Template Injection',
+    desc:"Flask/Jinja2 : le nom d'utilisateur est rendu directement dans un template. Quel payload de SSTI exécute du code Python ?",
+    code:`Hello {{ username }}!`,
+    hint:"Accède à la classe de base via __class__.__mro__.",
+    answers:["{{config.__class__.__init__.__globals__['os'].popen('id').read()}}","{{''.__class__.__mro__[1].__subclasses__()}}","{{7*7}}","{{ ''.__class__.__mro__[2].__subclasses__()[40]('/etc/passwd').read() }}","{{request.application.__globals__.__builtins__.__import__('os').popen('id').read()}}"]
+  },
+  {
+    id:25, diff:'hard', cat:'Memory',
+    title:'Buffer Overflow Ret2libc',
+    desc:"Un binaire 32-bit sans ASLR. Après avoir écrasé le return address, quelle technique retourne dans libc pour appeler system('/bin/sh') ?",
+    hint:"On ne retourne pas dans du shellcode mais dans...",
+    answers:["ret2libc","return to libc","return-to-libc attack","appel system via libc","ret2lib"]
+  },
+  {
+    id:26, diff:'hard', cat:'OAuth',
+    title:'State Parameter Missing',
+    desc:"Un flow OAuth 2.0 n'implémente pas le paramètre 'state'. Quelle attaque devient possible ?",
+    hint:"C'est une variante du CSRF mais pour OAuth.",
+    answers:["csrf","oauth csrf","cross-site request forgery oauth","account takeover via csrf","csrf sur oauth"]
+  },
+  {
+    id:27, diff:'hard', cat:'DNS Rebinding',
+    title:'Rebind Attack',
+    desc:"Le DNS Rebinding contourne la Same-Origin Policy. Quelle est l'étape clé qui permet à l'attaquant d'accéder aux services internes ?",
+    hint:"Le TTL joue un rôle crucial.",
+    answers:["changer l ip dns apres connexion","ttl court puis changement ip","rebind ip vers localhost","changer resolution dns vers 127.0.0.1","dns ttl 0 puis rebind vers interne"]
+  },
+  {
+    id:28, diff:'hard', cat:'Race Condition',
+    title:'TOCTOU',
+    desc:"Le code vérifie si un solde est suffisant, PUIS effectue le débit (TOCTOU). Comment l'exploite-t-on ?",
+    code:`if balance >= amount:\n    # traitement\n    debit(amount)`,
+    hint:"Deux requêtes simultanées avant que l'une n'ait débité.",
+    answers:["envoyer deux requetes simultanees","race condition double spend","requetes paralleles","parallel requests","concurrent requests avant debit"]
+  },
+  {
+    id:29, diff:'hard', cat:'GraphQL',
+    title:'Introspection Leak',
+    desc:"Une API GraphQL est en prod. Quelle requête GraphQL standard révèle le schéma complet (types, champs, mutations) ?",
+    hint:"C'est une fonctionnalité built-in à GraphQL.",
+    answers:["{__schema{types{name fields{name}}}}","{ __schema { queryType { name } } }","__schema","introspection query","{__schema{types{name}}}"]
+  },
+  {
+    id:30, diff:'hard', cat:'Insecure Crypto',
+    title:'ECB Oracle',
+    desc:"AES-ECB chiffre des blocs identiques de manière identique. Quelle attaque exploite ce déterminisme pour déchiffrer du contenu bloc par bloc ?",
+    hint:"On fait varier un byte à la fois et on observe les blocs.",
+    answers:["byte at a time ecb decryption","ecb byte-at-a-time","ecb oracle","chosen plaintext attack ecb","oracle padding ecb"]
+  },
+
+  // ── EXPERT ────────────────────────────────────────────────────────
+  {
+    id:31, diff:'expert', cat:'ROP Chain',
+    title:'Return Oriented Programming',
+    desc:"NX/DEP activé, pas de shellcode possible. Quelle technique enchaîne des 'gadgets' (ret instructions) existants dans le binaire pour construire un exploit ?",
+    hint:"Return Oriented P...",
+    answers:["rop","return oriented programming","rop chain","chainage de gadgets rop"]
+  },
+  {
+    id:32, diff:'expert', cat:'Cache Poisoning',
+    title:'Web Cache Deception',
+    desc:"Un CDN cache les réponses selon l'extension. Quelle URL force le cache à stocker une page privée (/profil) accessible à tous ?",
+    code:`Cache: MISS → /profil\nCache: HIT  → /profil/fake.css`,
+    hint:"Ajoute un suffixe d'extension statique après un chemin privé.",
+    answers:["/profil/inexistant.css","/profil/x.css","path traversal avec extension statique","ajouter .css a l url privee","/profil/.css"]
+  },
+  {
+    id:33, diff:'expert', cat:'Padding Oracle',
+    title:'CBC Padding Oracle',
+    desc:"Un serveur déchiffre du CBC et révèle si le padding est valide. Quelle attaque récupère le plaintext sans la clé, en manipulant le bloc précédent ?",
+    hint:"Vaudenay 2002.",
+    answers:["padding oracle","cbc padding oracle attack","vaudenay attack","bit flipping sur iv","bleichenbacher padding"]
+  },
+  {
+    id:34, diff:'expert', cat:'SSTI Avancé',
+    title:'Sandbox Escape Jinja2',
+    desc:"Jinja2 sandbox activée. Quelle classe Python permet d'atteindre os.system() en parcourant la MRO des subclasses ?",
+    code:`{{ ''.__class__.__mro__[?].__subclasses__() }}`,
+    hint:"cherche subprocess.Popen ou warnings dans les subclasses.",
+    answers:["subprocess.Popen","warnings.catch_warnings","__import__('os')","__builtins__.__import__","subprocess","mro subclasses bypass"]
+  },
+  {
+    id:35, diff:'expert', cat:'JWT',
+    title:'RS256 to HS256 Confusion',
+    desc:"Le serveur utilise RS256. En changeant l'algo en HS256, avec quelle clé signe-t-on le JWT pour que le serveur accepte le token forgé ?",
+    hint:"La clé publique devient la clé secrète HMAC.",
+    answers:["la clé publique rsa","public key","rsa public key as hmac secret","clé publique comme secret hmac","avec la cle publique rsa"]
+  },
+  {
+    id:36, diff:'expert', cat:'Desync',
+    title:'HTTP Request Smuggling',
+    desc:"Front-end (CL) et back-end (TE) interprètent différemment les headers. Quel couple de headers crée l'ambiguïté pour smuggler une requête ?",
+    hint:"Content-Length vs Transfer-Encoding.",
+    answers:["Content-Length + Transfer-Encoding","CL.TE","TE.CL","content-length et transfer-encoding chunked","CL TE desync","cl.te smuggling"]
+  },
+  {
+    id:37, diff:'expert', cat:'WASM',
+    title:'WebAssembly Reversing',
+    desc:"Une vérification de licence se fait en WebAssembly. Quel outil/format permet de décompiler du .wasm en WAT lisible par un humain ?",
+    hint:"WebAssembly Text format.",
+    answers:["wat","wasm2wat","wabt","wasm decompiler","wat format","wasm-decompile","wasm disassembler"]
+  },
+  {
+    id:38, diff:'expert', cat:'Side Channel',
+    title:'Timing Attack Password',
+    desc:"La comparaison de tokens s'arrête au premier byte différent. Quelle catégorie d'attaque exploite ces différences de temps de réponse ?",
+    hint:"Observable de l'extérieur via le réseau.",
+    answers:["timing attack","side channel timing","remote timing attack","attaque temporelle","time based oracle"]
+  },
+  {
+    id:39, diff:'expert', cat:'Kernel',
+    title:'Dirty COW (CVE-2016-5195)',
+    desc:"CVE-2016-5195 affecte le mécanisme Copy-On-Write du kernel Linux. Quel est le vecteur qui permet une LPE (Local Privilege Escalation) ?",
+    hint:"Race condition dans le kernel sur /proc/self/mem.",
+    answers:["race condition copy on write","/proc/self/mem","dirty cow","write sur fichier read-only via race","mmap race condition kernel"]
+  },
+  {
+    id:40, diff:'expert', cat:'PostMessage',
+    title:'Cross-Origin Message',
+    desc:"window.addEventListener('message') sans vérification de origin. Quelle exploitation est possible depuis n'importe quel domaine ?",
+    code:`window.addEventListener('message', (e) => {\n  eval(e.data)  // ⚠️\n})`,
+    hint:"XSS depuis n'importe quel domaine.",
+    answers:["xss via postmessage","envoyer du js via postmessage","eval injection postmessage","postmessage xss","injection code depuis iframe"]
+  },
+
+  // ── INSANE ────────────────────────────────────────────────────────
+  {
+    id:41, diff:'insane', cat:'Browser Exploit',
+    title:'V8 JIT Type Confusion',
+    desc:"CVE dans le JIT compiler V8. Quel mécanisme d'optimisation est abusé pour créer une confusion de type permettant de lire/écrire la mémoire arbitrairement ?",
+    hint:"Le compilateur optimiste spécule sur les types...",
+    answers:["jit optimization","speculative type confusion","turbofan type confusion","jit spraying","speculative jit","just in time type confusion"]
+  },
+  {
+    id:42, diff:'insane', cat:'Cryptographie',
+    title:'Fault Injection Attack',
+    desc:"En perturbant physiquement une signature RSA-CRT (voltage glitch), quelle attaque mathématique de 1997 récupère la clé privée depuis une seule signature corrompue ?",
+    hint:"Bellcore, 1997.",
+    answers:["boneh durfee","bellcore attack","crt fault attack","rsa crt fault","bellcore 1997","factor n from faulty signature"]
+  },
+  {
+    id:43, diff:'insane', cat:'Kernel Pwn',
+    title:'UAF Kernel Module',
+    desc:"Use-After-Free dans un driver kernel. Après avoir libéré un objet, quelle structure kernel Linux est souvent réallouée pour contrôler le RIP et exécuter du code ring-0 ?",
+    hint:"Pense aux structs allouées dans le slab allocator proches de tty.",
+    answers:["tty_struct","tty struct","seq_operations","msg_msg","pipe_buffer","sk_buff","tty_operations"]
+  },
+  {
+    id:44, diff:'insane', cat:'Side Channel',
+    title:'Spectre v2 BTB Poisoning',
+    desc:"Spectre variante 2 empoisonne quelle structure CPU pour rediriger l'exécution spéculative vers un gadget attaquant ?",
+    hint:"Branch Target...",
+    answers:["btb","branch target buffer","branch target injection","indirect branch predictor","btb poisoning","branch target buffer poisoning"]
+  },
+  {
+    id:45, diff:'insane', cat:'Crypto',
+    title:'Lattice Attack on RSA',
+    desc:"L'exposant public e est petit ET plusieurs messages sont chiffrés sans padding (textbook RSA). Quelle attaque utilise le théorème chinois des restes pour récupérer m ?",
+    hint:"Håstad, 1988.",
+    answers:["hastad broadcast attack","broadcast attack","coppersmith","crt hastad","hastad attack","chinese remainder theorem attack rsa"]
+  },
+  {
+    id:46, diff:'insane', cat:'Binary',
+    title:'Format String à la chaîne',
+    desc:"printf(buf) sans format string. En full ASLR+PIE+RELRO, quelle est la séquence minimale d'étapes pour obtenir un shell via une vulnérabilité de format string ?",
+    hint:"Leak → Calcul offset → Write → Trigger.",
+    answers:["leak adresse puis overwrite got","leak libc puis ret2libc","fuite adresse + overwrite retour","stack leak puis rop","leak + overwrite __malloc_hook"]
+  },
+  {
+    id:47, diff:'insane', cat:'Cloud',
+    title:'SSRF to IAM Takeover',
+    desc:"SSRF dans une app AWS ECS. La séquence d'appels pour voler les credentials IAM via le metadata endpoint, quelle URL donne les tokens temporaires ?",
+    code:`GET /fetch?url=http://[?]`,
+    hint:"169.254.170.2 pour ECS, 169.254.169.254 pour EC2.",
+    answers:["169.254.170.2/v2/credentials","http://169.254.170.2/v2/credentials/","169.254.169.254/latest/meta-data/iam/security-credentials/","iam security credentials via metadata","169.254.170.2"]
+  },
+  {
+    id:48, diff:'insane', cat:'Web3',
+    title:'Reentrancy Attack (DAO Hack)',
+    desc:"Un smart contract Ethereum appelle une adresse externe AVANT de mettre à jour son état. Quel pattern d'attaque drainait le DAO en 2016 ?",
+    code:`function withdraw() {\n  msg.sender.call{value: bal[msg.sender]}("");\n  bal[msg.sender] = 0; // trop tard !\n}`,
+    hint:"Le fallback rappelle withdraw() avant que le solde soit mis à zéro.",
+    answers:["reentrancy","reentrancy attack","cross function reentrancy","dao reentrancy","recursive call attack","fallback reentrancy"]
+  },
+  {
+    id:49, diff:'insane', cat:'Heap Exploit',
+    title:'House of Force / tcache poisoning',
+    desc:"tcache poisoning dans glibc 2.31+. On contrôle un chunk libéré. Quelle valeur écrit-on dans le fd pointer pour allouer le prochain malloc() à une adresse arbitraire ?",
+    hint:"fd pointe vers le prochain chunk libre… qu'on peut forger.",
+    answers:["adresse cible xor cle tcache","adresse cible","target address","fd = target - 0x10","tcache key bypass","adresse destination xor mangled"]
+  },
+  {
+    id:50, diff:'insane', cat:'0-day Research',
+    title:'Shadow Stack Bypass',
+    desc:"Intel CET (Control-flow Enforcement Technology) protège le return address via un Shadow Stack. Quelle technique théorique permet de contourner CET sans modifier le shadow stack ?",
+    hint:"On ne modifie pas le ret address, on détourne le flux autrement.",
+    answers:["jop","jump oriented programming","call oriented programming","cop","indirect jump gadget","cfi bypass via jop","rop free exploit via indirect calls"]
+  }
+];
+
+let solved = new Set(JSON.parse(localStorage.getItem('ctf_solved')||'[]'));
+
+function saveSolved(){
+  localStorage.setItem('ctf_solved', JSON.stringify([...solved]));
+}
+
+function updateScore(){
+  const s = solved.size;
+  document.getElementById('scoreDisplay').textContent = s+'/50';
+  document.getElementById('progressFill').style.width = (s/50*100)+'%';
+  document.getElementById('progressLabel').textContent = s + ' / 50 résolus';
+  if(s===50) document.getElementById('victoryBanner').classList.add('show');
+}
+
+function normalizeAnswer(a){
+  return a.toLowerCase().replace(/\s+/g,' ').trim().replace(/['"]/g,'');
+}
+
+function checkAnswer(id, inputEl, feedbackEl){
+  const challenge = challenges.find(c=>c.id===id);
+  const val = inputEl.value.trim();
+  if(!val) return;
+
+  const norm = normalizeAnswer(val);
+  const correct = challenge.answers.some(a => normalizeAnswer(a)===norm);
+
+  if(correct){
+    inputEl.classList.remove('wrong');
+    inputEl.classList.add('correct');
+    feedbackEl.className='feedback ok';
+    feedbackEl.textContent = '✓ CORRECT — bien joué!';
+    const card = document.getElementById('card-'+id);
+    card.classList.add('solved');
+    solved.add(id);
+    saveSolved();
+    updateScore();
+  } else {
+    inputEl.classList.remove('correct');
+    inputEl.classList.add('wrong');
+    feedbackEl.className='feedback err';
+    feedbackEl.textContent = '✗ Incorrect — cherche encore.';
+    setTimeout(()=>{ inputEl.classList.remove('wrong'); feedbackEl.textContent=''; }, 2000);
+  }
+}
+
+function toggleHint(id){
+  const el = document.getElementById('hint-'+id);
+  el.classList.toggle('visible');
+}
+
+function filterChallenges(filter, btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.challenge-card').forEach(card=>{
+    if(filter==='all') card.style.display='';
+    else if(filter==='solved') card.style.display = card.classList.contains('solved') ? '' : 'none';
+    else card.style.display = card.dataset.diff===filter ? '' : 'none';
+  });
+}
+
+// Escape any string before injecting into innerHTML
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function buildCards(){
+  const grid = document.getElementById('challengesGrid');
+  grid.innerHTML = '';
+  challenges.forEach(ch=>{
+    const isSolved = solved.has(ch.id);
+    const div = document.createElement('div');
+    div.className = 'challenge-card '+ch.diff+(isSolved?' solved':'');
+    div.id = 'card-'+ch.id;
+    div.dataset.diff = ch.diff;
+
+    const tagClass = 'tag-'+ch.diff;
+    const tagLabel = ch.diff.toUpperCase();
+
+    let codeBlock = '';
+    if(ch.code){
+      let c = esc(ch.code)
+        .replace(/(SELECT|FROM|WHERE|UNION|AND|OR|INSERT|DROP|TABLE|NULL|ORDER BY|GROUP BY|INTO|VALUES)/g,'<span class="kw">$1</span>')
+        .replace(/('.*?')/g,'<span class="str">$1</span>')
+        .replace(/(GET|POST|PUT|DELETE)/g,'<span class="fn">$1</span>')
+        .replace(/(\[INPUT\]|\[IP\]|\[\?\])/g,'<span class="hl">$1</span>')
+        .replace(/(#[^\n]*)/g,'<span class="cm">$1</span>');
+      codeBlock = `<div class="code-snippet">${c}</div>`;
+    }
+
+    div.innerHTML = `
+      <div class="card-header">
+        <span class="card-num">#${String(ch.id).padStart(2,'0')}</span>
+        <span class="difficulty-tag ${tagClass}">${tagLabel}</span>
+      </div>
+      <div class="card-title">${esc(ch.title)}</div>
+      <div class="card-category">${esc(ch.cat)}</div>
+      <div class="card-desc">${esc(ch.desc)}</div>
+      ${codeBlock}
+      <div class="answer-area">
+        <input class="answer-input" id="inp-${ch.id}" placeholder="Ton exploit / payload / réponse…" ${isSolved?'disabled':''}>
+        <button class="submit-btn" onclick="checkAnswer(${ch.id}, document.getElementById('inp-${ch.id}'), document.getElementById('fb-${ch.id}'))">SUBMIT</button>
+      </div>
+      <div class="feedback ${isSolved?'ok':''}" id="fb-${ch.id}">${isSolved?'✓ CORRECT — déjà résolu!':''}</div>
+      ${ch.hint?`<button class="hint-btn" onclick="toggleHint(${ch.id})">▶ indice</button><div class="hint-text" id="hint-${ch.id}">${esc(ch.hint)}</div>`:''}
+    `;
+    grid.appendChild(div);
+  });
+}
+buildCards();
+updateScore();
+
+// Enter key on inputs
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && e.target.classList.contains('answer-input')){
+    const id = parseInt(e.target.id.replace('inp-',''));
+    checkAnswer(id, e.target, document.getElementById('fb-'+id));
+  }
+});
+</script>
+</body>
+</html>
